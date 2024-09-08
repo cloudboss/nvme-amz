@@ -597,6 +597,3 @@ impl TryFrom<File> for Nvme {
 
 #[cfg(all(feature = "ioctl-nix", feature = "ioctl-rustix"))]
 compile_error!("The features ioctl-nix and ioctl-rustix are mutually exclusive");
-
-#[cfg(all(not(feature = "ioctl-nix"), not(feature = "ioctl-rustix")))]
-compile_error!("One of the features ioctl-nix or ioctl-rustix must be defined");
