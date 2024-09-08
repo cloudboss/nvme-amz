@@ -1,0 +1,17 @@
+[package]
+description = "A library to probe NVMe devices in Amazon EC2"
+edition = "2021"
+keywords = ["aws", "ec2", "linux", "nvme", "system"]
+license = "MIT"
+name = "nvme-amz"
+readme = "README.md"
+repository = "https://github.com/cloudboss/nvme-amz"
+version = "0.1.0"
+
+[dependencies]
+nix = { version = "0.29.0", features = ["ioctl"], optional = true }
+rustix = { version = "0.38.35", optional = true }
+
+[features]
+ioctl-nix = ["dep:nix"]
+ioctl-rustix = ["dep:rustix"]
