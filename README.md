@@ -27,5 +27,5 @@ Nvme { device: Device { device_name: Some("sda"), virtual_name: None }, model: A
 Output for an instance store volume:
 
 ```
-Nvme { device: Device { device_name: Some("sdb"), virtual_name: Some("ephemeral0") }, model: AmazonNvmeInstanceStore, vendor_id: VendorId(7439) }
+Nvme { device: Device { device_name: Some("sdb"), virtual_name: Some("ephemeral0") }, model: AmazonInstanceStore, vendor_id: VendorId(7439) }
 ```
