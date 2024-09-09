@@ -1,22 +1,27 @@
-// Copyright © 2024 Joseph Wright <joseph@cloudboss.co>
+//! A Rust library to probe NVMe devices in Amazon EC2.
+//!
+//! It provides functionality similar to that of the `ebsnvme-id` command but adds
+//! information about instance store devices, not only EBS.
+//!
+//! The library implements [`TryFrom<File>`] for [`Nvme`], to use as the constructor.
+//!
+//! # Example
+//!
+//! ```
+//! use std::fs::File;
+//!
+//! use nvme_amz::Nvme;
+//!
+//! fn main() {
+//!     let path = args().nth(1).expect("device path required");
+//!     let file = File::open(path).expect("unable to open device");
+//!     let nvme: Nvme = file.try_into().expect("unable to probe device");
+//!     println!("{:?}", nvme);
+//!     let name = nvme.device.name();
+//!     println!("name: {}", name);
+//! }
+//! ```
 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
 use std::ffi::{c_char, c_uchar, c_uint, c_ulonglong, c_ushort};
 #[cfg(any(feature = "ioctl-nix", feature = "ioctl-rustix"))]
 use std::fs::File;
@@ -30,15 +35,23 @@ const AMZ_VENDOR_ID: c_ushort = 0x1D0F;
 const NVME_ADMIN_IDENTIFY: u8 = 0x06;
 const NVME_IOCTL_ADMIN_CMD_NUM: u8 = 0x41;
 
+/// The error type for this crate.
 #[derive(Debug)]
 pub enum Error {
+    /// Device name not found in the vendor specific field.
     DeviceNameNotFound,
+    /// Wrapper for [`std::io::Error`].
     Io(io::Error),
+    /// The device name could not be parsed.
     UnparseableDeviceName(String),
+    /// A vendor ID other than Amazon was found.
     UnrecognizedVendorId(u16),
+    /// A model other than EBS or instance store was found.
     UnrecognizedModel(String),
+    /// Wrapper for [`nix::errno::Errno`].
     #[cfg(feature = "ioctl-nix")]
     NixErrno(nix::errno::Errno),
+    /// Wrapper for [`rustix::io::Errno`].
     #[cfg(feature = "ioctl-rustix")]
     RustixErrno(rustix::io::Errno),
 }
@@ -450,17 +463,21 @@ mod ioctl_rustix {
     }
 }
 
+/// A structure containing vendor-specific device names.
 pub struct Device {
-    // Device name defined in the block device mapping.
+    /// Device name defined in the block device mapping.
     pub device_name: Option<String>,
-    // Virtual name for instance store volumes, such as ephemeral0.
+    /// Virtual name for instance store volumes, such as ephemeral0.
     pub virtual_name: Option<String>,
-    // Force internal creation so name() cannot panic, by ensuring
+
+    // Force internal creation so the name() method cannot panic, by ensuring
     // either device_name or virtual_name have Some(value).
     _internal: (),
 }
 
 impl Device {
+    /// Get the device name or fall back to the virtual name if it
+    /// is an instance store volume.
     pub fn name(&self) -> &str {
         self.device_name
             .as_ref()
@@ -549,19 +566,27 @@ impl TryFrom<&[c_uchar]> for Device {
     }
 }
 
+/// The model of the NVMe device.
 #[derive(Debug)]
 pub enum Model {
+    /// Elastic Block Store volume.
     AmazonElasticBlockStore,
+    /// Instance store volume.
     AmazonInstanceStore,
 }
 
+/// The vendor ID of the NVMe device.
 #[derive(Debug)]
 pub struct VendorId(pub u16);
 
+/// An NVMe device, containing a subset of all identifying information.
 #[derive(Debug)]
 pub struct Nvme {
+    /// The [structure](Device) containing vendor-specific device names.
     pub device: Device,
+    /// The [model](Model) of the device.
     pub model: Model,
+    /// The [vendor ID](VendorId) of the device.
     pub vendor_id: VendorId,
 }
 
