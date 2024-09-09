@@ -575,12 +575,12 @@ impl Nvme {
         if ctrl.vid != AMZ_VENDOR_ID {
             return Err(Error::UnrecognizedVendorId(ctrl.vid));
         }
-        let mut model_str = String::from_iter(ctrl.mn.iter().map(|c| *c as u8 as char));
-        model_str = model_str.trim().to_string();
+        let mut model_str = String::from_iter(ctrl.mn.map(|c| c as u8 as char));
+        model_str.truncate(model_str.trim_end().len());
         let model = match model_str.as_str() {
             AMZ_EBS_MN => Model::AmazonElasticBlockStore,
             AMZ_INST_STORE_MN => Model::AmazonInstanceStore,
-            _ => return Err(Error::UnrecognizedModel(model_str.into())),
+            _ => return Err(Error::UnrecognizedModel(model_str)),
         };
         let device = ctrl.vs.bdev.as_slice().try_into()?;
         Ok(Self {
