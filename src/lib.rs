@@ -17,7 +17,7 @@
 //!     let file = File::open(path).expect("unable to open device");
 //!     let nvme: Nvme = file.try_into().expect("unable to probe device");
 //!     println!("{:?}", nvme);
-//!     let name = nvme.device.name();
+//!     let name = nvme.name();
 //!     println!("name: {}", name);
 //! }
 //! ```
@@ -464,7 +464,7 @@ mod ioctl_rustix {
 }
 
 /// A structure containing vendor-specific device names.
-pub struct Device {
+pub struct Names {
     /// Device name defined in the block device mapping.
     pub device_name: Option<String>,
     /// Virtual name for instance store volumes, such as ephemeral0.
@@ -475,26 +475,16 @@ pub struct Device {
     _internal: (),
 }
 
-impl Device {
-    /// Get the device name or fall back to the virtual name if it
-    /// is an instance store volume.
-    pub fn name(&self) -> &str {
-        self.device_name
-            .as_ref()
-            .unwrap_or_else(|| self.virtual_name.as_ref().unwrap())
-    }
-}
-
-impl fmt::Debug for Device {
+impl fmt::Debug for Names {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Device")
+        f.debug_struct("Names")
             .field("device_name", &self.device_name)
             .field("virtual_name", &self.virtual_name)
             .finish()
     }
 }
 
-impl TryFrom<&[c_uchar]> for Device {
+impl TryFrom<&[c_uchar]> for Names {
     type Error = Error;
 
     fn try_from(chars: &[u8]) -> Result<Self> {
@@ -582,15 +572,24 @@ pub struct VendorId(pub u16);
 /// An NVMe device, containing a subset of all identifying information.
 #[derive(Debug)]
 pub struct Nvme {
-    /// The [structure](Device) containing vendor-specific device names.
-    pub device: Device,
     /// The [model](Model) of the device.
     pub model: Model,
+    /// The [structure](Names) containing vendor-specific device names.
+    pub names: Names,
     /// The [vendor ID](VendorId) of the device.
     pub vendor_id: VendorId,
 }
 
 impl Nvme {
+    /// Get the vendor specific device name or fall back to the virtual name if it
+    /// is an instance store volume.
+    pub fn name(&self) -> &str {
+        self.names
+            .device_name
+            .as_ref()
+            .unwrap_or_else(|| self.names.virtual_name.as_ref().unwrap())
+    }
+
     fn from_fd<F, IoctlFn>(fd: F, f: IoctlFn) -> Result<Self>
     where
         F: AsFd,
@@ -607,10 +606,10 @@ impl Nvme {
             AMZ_INST_STORE_MN => Model::AmazonInstanceStore,
             _ => return Err(Error::UnrecognizedModel(model_str)),
         };
-        let device = ctrl.vs.bdev.as_slice().try_into()?;
+        let names = ctrl.vs.bdev.as_slice().try_into()?;
         Ok(Self {
-            device,
             model,
+            names,
             vendor_id: VendorId(ctrl.vid),
         })
     }
