@@ -20,8 +20,8 @@
 use std::ffi::{c_char, c_uchar, c_uint, c_ulonglong, c_ushort};
 #[cfg(any(feature = "ioctl-nix", feature = "ioctl-rustix"))]
 use std::fs::File;
-use std::io;
 use std::os::fd::AsFd;
+use std::{fmt, io};
 
 const AMZ_EBS_MN: &str = "Amazon Elastic Block Store";
 const AMZ_INST_STORE_MN: &str = "Amazon EC2 NVMe Instance Storage";
@@ -450,20 +450,30 @@ mod ioctl_rustix {
     }
 }
 
-#[derive(Debug)]
 pub struct Device {
     // Device name defined in the block device mapping.
-    device_name: Option<String>,
+    pub device_name: Option<String>,
     // Virtual name for instance store volumes, such as ephemeral0.
-    virtual_name: Option<String>,
+    pub virtual_name: Option<String>,
+    // Force internal creation so name() cannot panic, by ensuring
+    // either device_name or virtual_name have Some(value).
+    _internal: (),
 }
 
 impl Device {
-    pub fn name(&self) -> Result<String> {
-        let device_name = self.device_name.clone();
-        let virtual_name = self.virtual_name.clone();
-        let name = device_name.unwrap_or(virtual_name.ok_or(Error::DeviceNameNotFound)?);
-        Ok(name)
+    pub fn name(&self) -> &str {
+        self.device_name
+            .as_ref()
+            .unwrap_or_else(|| self.virtual_name.as_ref().unwrap())
+    }
+}
+
+impl fmt::Debug for Device {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Device")
+            .field("device_name", &self.device_name)
+            .field("virtual_name", &self.virtual_name)
+            .finish()
     }
 }
 
@@ -534,6 +544,7 @@ impl TryFrom<&[c_uchar]> for Device {
         Ok(Self {
             device_name: device_name.cloned(),
             virtual_name: virtual_name.cloned(),
+            _internal: (),
         })
     }
 }
