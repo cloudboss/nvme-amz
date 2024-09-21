@@ -7,7 +7,8 @@
 //!
 //! # Example
 //!
-//! ```
+//! ```no_run
+//! use std::env::args;
 //! use std::fs::File;
 //!
 //! use nvme_amz::Nvme;
