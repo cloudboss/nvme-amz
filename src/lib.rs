@@ -26,7 +26,7 @@ use std::ffi::{c_char, c_uchar, c_uint, c_ulonglong, c_ushort};
 #[cfg(any(feature = "ioctl-nix", feature = "ioctl-rustix"))]
 use std::fs::File;
 use std::os::fd::AsFd;
-use std::{fmt, io};
+use std::{error, fmt, io};
 
 const AMZ_EBS_MN: &str = "Amazon Elastic Block Store";
 const AMZ_INST_STORE_MN: &str = "Amazon EC2 NVMe Instance Storage";
@@ -55,6 +55,8 @@ pub enum Error {
     #[cfg(feature = "ioctl-rustix")]
     RustixErrno(rustix::io::Errno),
 }
+
+impl error::Error for Error {}
 
 impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self {
