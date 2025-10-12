@@ -422,7 +422,7 @@ mod ioctl_rustix {
     use std::os::fd::AsFd;
 
     use rustix::io;
-    use rustix::ioctl::{ioctl, Direction, Ioctl, IoctlOutput, Opcode};
+    use rustix::ioctl::{ioctl, opcode, Direction, Ioctl, IoctlOutput, Opcode};
 
     use super::*;
 
@@ -430,12 +430,15 @@ mod ioctl_rustix {
         type Output = NvmeIdCtrl;
 
         const IS_MUTATING: bool = false;
-        const OPCODE: Opcode = Opcode::from_components(
-            Direction::ReadWrite,
-            b'N',
-            NVME_IOCTL_ADMIN_CMD_NUM,
-            std::mem::size_of::<NvmeAdminCmd>(),
-        );
+
+        fn opcode(&self) -> Opcode {
+            opcode::from_components(
+                Direction::ReadWrite,
+                b'N',
+                NVME_IOCTL_ADMIN_CMD_NUM,
+                std::mem::size_of::<NvmeAdminCmd>(),
+            )
+        }
 
         fn as_ptr(&mut self) -> *mut c_void {
             self as *const _ as *mut _

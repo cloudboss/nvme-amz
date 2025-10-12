@@ -6,11 +6,11 @@ license = "MIT"
 name = "nvme-amz"
 readme = "README.md"
 repository = "https://github.com/cloudboss/nvme-amz"
-version = "0.3.0"
+version = "0.4.0"
 
 [dependencies]
 nix = { version = "0.29.0", features = ["ioctl"], optional = true }
-rustix = { version = "0.38.35", optional = true }
+rustix = { version = "1.1", optional = true }
 
 [features]
 ioctl-nix = ["dep:nix"]
